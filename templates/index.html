@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsVerify AI - Professional Fact-Checking Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <!-- Header & Hamburger Menu Nav -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex justify-between items-center relative">
+            <div>
+                <h1 class="text-3xl font-extrabold text-blue-600 tracking-tight">Fake News Detector</h1>
+                <p class="text-sm text-gray-500 font-medium mt-1">Advanced Multi-Modal Document & Fact-Checking Engine</p>
+            </div>
+            
+            <!-- Hamburger Menu Button -->
+            <div class="relative">
+                <button onclick="toggleMenu()" class="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors focus:outline-none flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50">
+                    <a href="/history" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-semibold transition-colors">
+                        📜 View History
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+            <label class="block text-sm font-bold text-gray-700">What do you want to verify?</label>
+            
+            <textarea id="claimInput" rows="3" class="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all text-gray-800" placeholder="Paste a claim, news URL, or drop your document below..."></textarea>
+            
+            <!-- Drag and Drop Zone -->
+            <div id="dropZone" class="border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-blue-50/50 rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" accept=".pdf,.docx,.txt,image/*,.mp3,.wav,.m4a,.mp4,.mov,.webm" class="hidden" onchange="updateFileName()">
+                <svg class="w-10 h-10 text-blue-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <p class="text-sm text-gray-700 font-medium">Click to upload or drag & drop documents, images, audio, or video/Reels (.mp4)</p>
+                <span id="fileName" class="text-sm text-blue-600 font-bold mt-2 block w-full truncate px-4"></span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="clearInputs()" id="clearBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-6 py-3 rounded-xl shadow-sm transition-all">
+                    Clear
+                </button>
+                <button onclick="verifyClaim()" id="verifyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                    Verify Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="hidden bg-blue-50 p-6 rounded-2xl border border-blue-200 text-center animate-pulse">
+            <p class="text-blue-700 font-bold">Extracting file structure and executing multi-source verification pipeline...</p>
+        </div>
+
+        <!-- Results Area -->
+        <div id="resultArea" class="hidden space-y-6">
+            <!-- Assessment & Confidence Card -->
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Final Assessment</span>
+                    <h2 id="resAssessment" class="text-3xl font-black mt-1"></h2>
+                </div>
+                <div class="w-full md:w-auto text-left md:text-right bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Confidence Score</span>
+                    <div class="flex items-center gap-3 mt-1">
+                        <div class="w-32 bg-gray-200 h-3 rounded-full overflow-hidden">
+                            <div id="confidenceBar" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <p id="resConfidence" class="text-xl font-black text-gray-800"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Breakdown Box -->
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200 space-y-6">
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Input Analyzed</h3>
+                    <p id="resClaim" class="text-gray-700 font-mono text-sm bg-gray-50 p-4 rounded-xl border border-gray-200 whitespace-pre-wrap max-h-40 overflow-y-auto"></p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg mb-2">Executive Summary</h3>
+                    <p id="resSummary" class="text-gray-900 font-semibold text-base leading-relaxed bg-blue-50/50 p-4 rounded-xl border border-blue-100"></p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg mb-2">Detailed Breakdown</h3>
+                    <p id="resExplanation" class="text-gray-600 leading-relaxed"></p>
+                </div>
+            </div>
+
+            <!-- Sources Card -->
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+                <h3 class="font-bold text-gray-800 text-lg mb-4">Verified Evidence & Stances</h3>
+                <div id="resSources" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('dropdownMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        window.addEventListener('click', function(e) {
+            const menu = document.getElementById('dropdownMenu');
+            const button = menu.previousElementSibling;
+            if (!menu.contains(e.target) && !button.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('border-blue-500', 'bg-blue-50');
+                dropZone.classList.remove('border-gray-300', 'bg-gray-50');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+                dropZone.classList.add('border-gray-300', 'bg-gray-50');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFileName();
+            }
+        }, false);
+
+        function updateFileName() {
+            const fileNameDisplay = document.getElementById('fileName');
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = "Selected: " + fileInput.files[0].name;
+            } else {
+                fileNameDisplay.textContent = '';
+            }
+        }
+
+        function clearInputs() {
+            document.getElementById('claimInput').value = '';
+            document.getElementById('fileInput').value = '';
+            updateFileName();
+            document.getElementById('resultArea').classList.add('hidden');
+            document.getElementById('resClaim').innerText = ''; 
+            document.getElementById('resSources').innerHTML = ''; 
+        }
+
+        async function verifyClaim() {
+            const textInput = document.getElementById('claimInput').value;
+            const fileUpload = document.getElementById('fileInput').files[0];
+            const btn = document.getElementById('verifyBtn');
+            const loading = document.getElementById('loading');
+            const resultArea = document.getElementById('resultArea');
+
+            if (!textInput && !fileUpload) {
+                alert("Please enter text, a URL, or upload a document file!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = 'Verifying...';
+            resultArea.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            const formData = new FormData();
+            if (textInput) formData.append('text', textInput);
+            if (fileUpload) formData.append('file', fileUpload);
+
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "An error occurred");
+                }
+
+                const assessmentEl = document.getElementById('resAssessment');
+                assessmentEl.innerText = data.assessment;
+                
+                if (data.assessment === 'LIKELY_TRUE') assessmentEl.className = "text-3xl font-black mt-1 text-green-600";
+                else if (data.assessment === 'LIKELY_FALSE') assessmentEl.className = "text-3xl font-black mt-1 text-red-600";
+                else if (data.assessment === 'MISLEADING') assessmentEl.className = "text-3xl font-black mt-1 text-amber-600";
+                else assessmentEl.className = "text-3xl font-black mt-1 text-gray-600";
+
+                document.getElementById('resConfidence').innerText = data.confidence + '%';
+                document.getElementById('confidenceBar').style.width = data.confidence + '%';
+                
+                // Color confidence bar based on score
+                const bar = document.getElementById('confidenceBar');
+                if (data.confidence >= 75) bar.className = "bg-green-500 h-full rounded-full transition-all duration-500";
+                else if (data.confidence >= 40) bar.className = "bg-amber-500 h-full rounded-full transition-all duration-500";
+                else bar.className = "bg-red-500 h-full rounded-full transition-all duration-500";
+
+                document.getElementById('resClaim').innerText = data.claim;
+                document.getElementById('resSummary').innerText = data.summary;
+                document.getElementById('resExplanation').innerText = data.explanation;
+
+                const sourcesContainer = document.getElementById('resSources');
+                sourcesContainer.innerHTML = '';
+
+                if (data.sources && data.sources.length > 0) {
+                    data.sources.forEach(src => {
+                        let stanceBadge = '';
+                        if (src.stance === 'SUPPORTS') {
+                            stanceBadge = '<span class="bg-green-100 text-green-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">SUPPORTS</span>';
+                        } else if (src.stance === 'CONTRADICTS') {
+                            stanceBadge = '<span class="bg-red-100 text-red-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">CONTRADICTS</span>';
+                        } else if (src.stance === 'MISLEADING' || src.stance === 'UNCLEAR') {
+                            stanceBadge = '<span class="bg-amber-100 text-amber-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">' + src.stance + '</span>';
+                        } else {
+                            stanceBadge = '<span class="bg-gray-100 text-gray-700 text-xs font-extrabold px-2.5 py-1 rounded-lg">' + src.stance + '</span>';
+                        }
+
+                        sourcesContainer.innerHTML += `
+                            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <div class="mt-0.5">${stanceBadge}</div>
+                                <div class="flex-1 min-w-0">
+                                    <a href="${src.url}" target="_blank" class="text-sm font-semibold text-blue-600 hover:underline block truncate">${src.title || src.domain}</a>
+                                    <span class="text-xs text-gray-400">${src.domain}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    sourcesContainer.innerHTML = '<p class="text-sm text-gray-500 italic">No direct web sources found for this query.</p>';
+                }
+
+                loading.classList.add('hidden');
+                resultArea.classList.remove('hidden');
+
+            } catch (err) {
+                alert("Error: " + err.message);
+                loading.classList.add('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Verify Now';
+            }
+        }
+    </script>
+</body>
+</html>
